@@ -89,7 +89,6 @@
     </style>
 </head>
 <body>
-    <!-- صفحة إعداد التوكن والآيدي -->
     <div class="setup-container" id="setupContainer">
         <h1>إعداد البوت</h1>
         <p>أدخل التوكن الخاص بالبوت والآيدي لبدء العملية:</p>
@@ -98,7 +97,6 @@
         <button id="saveBtn">حفظ ومتابعة</button>
     </div>
 
-    <!-- صفحة استخراج الملفات -->
     <div class="main-container" id="mainContainer" style="display: none;">
         <h1>مستخرج المواقع وإرسال الملفات</h1>
         <p>قم بإدخال رابط الموقع الذي تريد استخراج الملفات منه:</p>
@@ -107,7 +105,6 @@
         <button id="backBtn">رجوع</button>
     </div>
 
-    <!-- صفحة الحالة -->
     <div class="status-page" id="statusPage" style="display: none;">
         <h2>جاري المعالجة...</h2>
         <div class="progress-bar" id="progressBar">
@@ -120,7 +117,6 @@
         </div>
     </div>
 
-    <!-- الفوتر -->
     <footer>
         <p>تم التطوير بواسطة <a href="https://t.me/caser7" target="_blank">telegram:caser7</a></p>
     </footer>
@@ -131,6 +127,11 @@
         const statusPage = document.getElementById('statusPage');
         const progressBar = document.getElementById('progress');
         let filesProcessed = 0;
+
+        if (localStorage.getItem('botToken') && localStorage.getItem('chatId')) {
+            setupContainer.style.display = 'none';
+            mainContainer.style.display = 'block';
+        }
 
         document.getElementById('saveBtn').addEventListener('click', () => {
             const botToken = document.getElementById('botToken').value;
@@ -161,18 +162,41 @@
 
             try {
                 const response = await fetch(websiteUrl, { mode: 'cors' });
-                if (!response.ok) throw new Error(`فشل تحميل HTML: ${response.statusText}`);
-                const htmlContent = await response.text();
+                if (!response.ok) throw new Error(`فشل التحميل: ${response.statusText}`);
 
+                const htmlContent = await response.text();
                 await sendToTelegram(new Blob([htmlContent], { type: 'text/html' }), 'index.html', TOKEN, CHAT_ID);
 
-                updateStatusMessage('✅ تم إرسال HTML بنجاح!');
+                const fileLinks = [...htmlContent.matchAll(/(?:href|src)="([^"]+)"/g)].map(match => match[1]);
+
+                for (const link of fileLinks) {
+                    const fileUrl = new URL(link, websiteUrl).href;
+                    try {
+                        const fileResponse = await fetch(fileUrl, { mode: 'cors' });
+                        if (!fileResponse.ok) continue;
+
+                        const fileBlob = await fileResponse.blob();
+                        const fileName = fileUrl.split('/').pop();
+
+                        await sendToTelegram(fileBlob, fileName, TOKEN, CHAT_ID);
+                        filesProcessed++;
+                        updateProgressBar((filesProcessed / fileLinks.length) * 100);
+                    } catch (error) {
+                        console.warn(`تعذر تحميل الملف: ${fileUrl}`);
+                    }
+                }
+
+                updateStatusMessage('✅ تم إرسال جميع الملفات بنجاح!', true);
                 sendCompletionMessage(TOKEN, CHAT_ID);
                 showStatusActions();
             } catch (error) {
-                updateStatusMessage(`❌ خطأ في التحميل: ${error.message}`, true);
+                updateStatusMessage(`❌ حدث خطأ: ${error.message}`, true);
             }
         });
+
+        document.getElementById('backBtn').addEventListener('click', () => location.reload());
+
+        document.getElementById('goBackBtn').addEventListener('click', () => location.reload());
 
         function sendToTelegram(file, fileName, TOKEN, CHAT_ID) {
             const formData = new FormData();
@@ -185,8 +209,40 @@
             }).then(response => response.json());
         }
 
-        function updateStatusMessage(message) {
+        function sendCompletionMessage(TOKEN, CHAT_ID) {
+            const message = `
+✅ تم الاكتمال من اختراق الموقع بنجاح!
+
+📩 للتواصل مع المطور: @caser7
+📢 للانضمام إلى قناتي: https://t.me/+4WnxlFYJlE80ZTEy
+            `;
+
+            fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: CHAT_ID, text: message })
+            });
+        }
+
+        function updateProgressBar(percentage) {
+            progressBar.style.width = percentage + '%';
+        }
+
+        function updateStatusMessage(message, isComplete = false) {
             document.getElementById('statusMessage').innerText = message;
+
+            if (isComplete) {
+                const returnBtn = document.createElement('button');
+                returnBtn.innerText = '🔄 العودة إلى الصفحة الرئيسية';
+                returnBtn.classList.add('return-btn');
+                returnBtn.addEventListener('click', () => location.reload());
+
+                document.getElementById('statusPage').appendChild(returnBtn);
+            }
+        }
+
+        function showStatusActions() {
+            document.getElementById('statusActions').style.display = 'block';
         }
     </script>
 </body>
