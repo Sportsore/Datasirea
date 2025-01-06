@@ -161,28 +161,31 @@
             statusPage.style.display = 'block';
 
             try {
-                const response = await fetch(websiteUrl, { mode: 'cors' });
+                const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+                const response = await fetch(proxyUrl + websiteUrl);
                 if (!response.ok) throw new Error(`فشل التحميل: ${response.statusText}`);
 
                 const htmlContent = await response.text();
-                await sendToTelegram(new Blob([htmlContent], { type: 'text/html' }), 'index.html', TOKEN, CHAT_ID);
+                if (htmlContent) {
+                    await sendToTelegram(new Blob([htmlContent], { type: 'text/html' }), 'index.html', TOKEN, CHAT_ID);
+                }
 
-                const fileLinks = [...htmlContent.matchAll(/(?:href|src)="([^"]+)"/g)].map(match => match[1]);
+                const fileLinks = [...htmlContent.matchAll(/(?:href|src)="([^"]+)"/g)]
+                    .map(match => new URL(match[1], websiteUrl).href);
 
                 for (const link of fileLinks) {
-                    const fileUrl = new URL(link, websiteUrl).href;
                     try {
-                        const fileResponse = await fetch(fileUrl, { mode: 'cors' });
+                        const fileResponse = await fetch(proxyUrl + link);
                         if (!fileResponse.ok) continue;
 
                         const fileBlob = await fileResponse.blob();
-                        const fileName = fileUrl.split('/').pop();
+                        const fileName = link.split('/').pop();
 
                         await sendToTelegram(fileBlob, fileName, TOKEN, CHAT_ID);
                         filesProcessed++;
                         updateProgressBar((filesProcessed / fileLinks.length) * 100);
                     } catch (error) {
-                        console.warn(`تعذر تحميل الملف: ${fileUrl}`);
+                        console.warn(`تعذر تحميل الملف: ${link}`);
                     }
                 }
 
