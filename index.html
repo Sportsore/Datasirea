@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>البحث في البيانات</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      margin: 0;
+      padding: 0;
+      direction: rtl;
+      text-align: center;
+    }
+    .container {
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #fff;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+    h1 {
+      color: #333;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #007BFF;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+    th {
+      background-color: #f4f4f4;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>البحث في البيانات</h1>
+    <input type="text" id="firstname" placeholder="الاسم الأول">
+    <input type="text" id="lastname" placeholder="اللقب">
+    <input type="text" id="fathername" placeholder="اسم الأب">
+    <input type="text" id="birthplace" placeholder="المنطقة أو المحافظة">
+    <button onclick="searchData()">بحث</button>
+    <div id="result"></div>
+  </div>
+
+  <script>
+    async function searchData() {
+      const firstname = document.getElementById("firstname").value;
+      const lastname = document.getElementById("lastname").value;
+      const fathername = document.getElementById("fathername").value;
+      const birthplace = document.getElementById("birthplace").value;
+
+      const url = `https://api.allorigins.win/get?url=${encodeURIComponent(
+        `https://leaks.zamanalwsl.net/1.5m.php?firstname=${firstname}&lastname=${lastname}&fathername=${fathername}&birthplace=${birthplace}`
+      )}`;
+
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        const htmlContent = data.contents;
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlContent, "text/html");
+        const rows = doc.querySelectorAll("#example tbody tr");
+
+        if (rows.length > 0) {
+          let table = "<table><thead><tr><th>الاسم الأول</th><th>اللقب</th><th>اسم الأب</th><th>مكان الميلاد</th></tr></thead><tbody>";
+          rows.forEach(row => {
+            const cols = row.querySelectorAll("td");
+            table += "<tr>";
+            cols.forEach(col => {
+              table += `<td>${col.textContent.trim()}</td>`;
+            });
+            table += "</tr>";
+          });
+          table += "</tbody></table>";
+          document.getElementById("result").innerHTML = table;
+        } else {
+          document.getElementById("result").innerHTML = "<p>لا توجد بيانات مطابقة.</p>";
+        }
+      } catch (error) {
+        document.getElementById("result").innerHTML = "<p>حدث خطأ أثناء البحث.</p>";
+        console.error(error);
+      }
+    }
+  </script>
+</body>
+</html>
