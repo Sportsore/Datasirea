@@ -50,8 +50,10 @@ function fetchData() {
       const doc = parser.parseFromString(html, "text/html");
       const rows = doc.querySelectorAll("#example tbody tr");
 
-      if (rows.length === 0) {
-        document.getElementById("responseBox").innerText = "لا توجد بيانات لهذا الشخص.";
+      if (!rows || rows.length === 0) {
+        console.error("HTML Response:", html);
+        document.getElementById("responseBox").innerText =
+          "لا توجد بيانات لهذا الشخص، تحقق من المدخلات.";
         return;
       }
 
@@ -67,6 +69,7 @@ function fetchData() {
       document.getElementById("responseBox").innerText = result;
     })
     .catch((error) => {
+      console.error("Error:", error);
       document.getElementById("responseBox").innerText = `خطأ في التحميل: ${error}`;
     });
 }
@@ -88,8 +91,10 @@ function fetchDataWithAjax() {
       const doc = parser.parseFromString(xhr.responseText, "text/html");
       const rows = doc.querySelectorAll("#example tbody tr");
 
-      if (rows.length === 0) {
-        document.getElementById("responseBox").innerText = "لا توجد بيانات لهذا الشخص.";
+      if (!rows || rows.length === 0) {
+        console.error("HTML Response:", xhr.responseText);
+        document.getElementById("responseBox").innerText =
+          "لا توجد بيانات لهذا الشخص، تحقق من المدخلات.";
         return;
       }
 
